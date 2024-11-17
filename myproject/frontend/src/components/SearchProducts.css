@@ -14,16 +14,51 @@
     margin-bottom: 20px;
 }
 
+.title-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 20px;
+    font-family: Arial, sans-serif;
+}
+
+.title-container h1 {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+}
+
+
 .search-form {
     display: flex;
     flex-direction: column;
     gap: 10px;
     width: 100%;
-    max-width: 500px;
+    max-width: 600px;
 }
 
-.search-form input, 
-.search-form select, 
+/* Flexbox row for dropdown filters */
+.filter-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+/* Make dropdowns flexible and responsive */
+.search-form select {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.search-form input,
 .search-form button {
     padding: 10px;
     font-size: 16px;
@@ -33,7 +68,7 @@
     transition: border-color 0.3s;
 }
 
-.search-form input:focus, 
+.search-form input:focus,
 .search-form select:focus {
     border-color: #4CAF50;
 }

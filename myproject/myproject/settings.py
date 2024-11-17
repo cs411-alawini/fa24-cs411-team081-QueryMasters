@@ -79,10 +79,15 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'mysql.connector.django',
+        'NAME': 'beauty',               # Name of the database you created
+        'USER': 'root',               # Database username
+        'PASSWORD': 'root',           # Database password
+        'HOST': '34.69.171.186',            # Public IP of the Cloud SQL instance
+        'PORT': '3306',                        # Default MySQL port
     }
 }
+
 
 
 # Password validation
@@ -104,6 +109,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React app
+    
 ]
 
 # Internationalization
