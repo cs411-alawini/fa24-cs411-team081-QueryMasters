@@ -1,4 +1,3 @@
-// src/SearchProducts.js
 import './SearchProducts.css';
 import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
@@ -13,20 +12,33 @@ function SearchProducts({ UserId }) {
   });
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [wishlist, setWishlist] = useState(new Set()); // Track products in wishlist
 
-  // useEffect(() => {
-  //   // Save UserId to localStorage if provided
-  //   if (UserId) {
-  //     localStorage.setItem('UserId', UserId);
-  //   }
-  // }, [UserId]);
+  // useEffect to load wishlist from localStorage or API if UserId is available
+  useEffect(() => {
+    if (UserId) {
+      fetchWishlist(UserId);
+    }
+  }, [UserId]);
 
-  // Handle search input change
+  const fetchWishlist = (UserId) => {
+    fetch(`http://localhost:5001/api/users/wishlist/${UserId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.wishlist) {
+          const wishlistSet = new Set(data.wishlist.map((item) => item.ProductId));
+          setWishlist(wishlistSet);
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching wishlist:', error);
+      });
+  };
+
   const handleInputChange = (e) => {
     setSearchQuery(e.target.value);
   };
 
-  // Handle filter changes
   const handleFilterChange = (e) => {
     setFilters({
       ...filters,
@@ -34,12 +46,10 @@ function SearchProducts({ UserId }) {
     });
   };
 
-  // Handle form submission
   const handleSearch = (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Build the query parameters
     const params = new URLSearchParams({
       search: searchQuery,
       priceRange: filters.priceRange,
@@ -48,7 +58,6 @@ function SearchProducts({ UserId }) {
       rating: filters.rating,
     });
 
-    // Fetch products from the backend
     fetch(`http://localhost:5001/api/products?${params.toString()}`)
       .then((response) => response.json())
       .then((data) => {
@@ -63,10 +72,15 @@ function SearchProducts({ UserId }) {
   };
 
   const handleAddToWishlist = (ProductId) => {
-    const storedUserId = localStorage.getItem('UserId'); // Ensure key matches
-
+    const storedUserId = localStorage.getItem('UserId');
     if (!storedUserId) {
       alert('User not logged in!');
+      return;
+    }
+
+    // Check if the product is already in the wishlist
+    if (wishlist.has(ProductId)) {
+      alert('Product is already in the wishlist.');
       return;
     }
 
@@ -80,6 +94,7 @@ function SearchProducts({ UserId }) {
       .then((response) => response.json())
       .then((data) => {
         if (data.message) {
+          setWishlist((prevWishlist) => new Set(prevWishlist.add(ProductId))); // Add to wishlist set
           alert('Item added to wishlist!');
         } else {
           alert('Failed to add item to wishlist.');
@@ -93,7 +108,6 @@ function SearchProducts({ UserId }) {
 
   return (
     <div className="search-container">
-      {/* Welcome Section */}
       <div className="welcome-section">
         <h1>Welcome to GlowGuide!</h1>
         <p>Start to search what products is best for you!</p>
@@ -182,7 +196,6 @@ function SearchProducts({ UserId }) {
                     <p><strong>Brand ID:</strong> {product.BrandId}</p>
                     <p><strong>Usage Frequency:</strong> {product.UsageFrequency}</p>
                     <p><strong>Skin Type:</strong> {product.SkinType}</p>
-                    <p><strong>Number of Reviews:</strong> {product.NumberOfReviews}</p>
                     <p><strong>Rating:</strong> {product.Rating}</p>
                     <p><strong>Gender Target:</strong> {product.GenderTarget}</p>
                   </div>
@@ -190,7 +203,9 @@ function SearchProducts({ UserId }) {
                     onClick={() => handleAddToWishlist(product.ProductId)}
                     className="wishlist-button"
                   >
-                    Add to Wishlist
+                    {wishlist.has(product.ProductId)
+                      ? <span role="img" aria-label="added to wishlist">❤️</span>  // Red heart if already in wishlist
+                      : 'Add to Wishlist'}
                   </button>
                   <Link to={`/product/${product.ProductId}`} className="detail-button">
                     View Details

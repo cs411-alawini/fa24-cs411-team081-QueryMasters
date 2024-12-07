@@ -116,3 +116,61 @@ h2 {
 .delete-button:hover {
     background-color: #cc0000;
 }
+
+/* Edit Comment Form */
+.edit-comment-form label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.edit-comment-form textarea,
+.edit-comment-form input {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.edit-comment-form button {
+    background-color: #009688;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.edit-comment-form button:hover {
+    background-color: #00796B;
+}
+
+/* Buttons */
+.edit-button,
+.delete-button {
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.delete-button {
+    background-color: #d32f2f;
+}
+
+.edit-button:hover {
+    background-color: #1558b0;
+}
+
+.delete-button:hover {
+    background-color: #b71c1c;
+}
