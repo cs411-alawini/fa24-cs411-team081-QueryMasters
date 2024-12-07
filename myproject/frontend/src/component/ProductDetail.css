@@ -5,16 +5,64 @@
     max-width: 600px;
     margin: auto;
   }
-  
+
   .product-detail-container h2 {
+    background-color: #fff8e1;
+    padding:15px;
+    border-radius:8px;
     margin-bottom: 20px;
   }
-  
+
+  .product-detail-container h2 {
+  margin-bottom: 20px;
+  font-size: 2rem;
+  color: #333;
+}
+
   .product-detail-container p {
     margin-bottom: 10px;
+    color: #555;
   }
-  
 
-  
+  .button-container {
+  display: flex;
+  flex-direction: column; /* Make buttons stack vertically */
+  gap: 15px; /* Adds gap between buttons */
+  align-items: center; /* Center buttons horizontally */
+}
 
-  
+.submit-button {
+  width: auto;
+  padding: 8px 16px; /* Size for Submit button */
+  font-size: 1rem; /* Button font size */
+  color: white;
+  background-color: #f8bbd0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-bottom: 0; /* No extra space below button */
+}
+
+.submit-button:hover {
+  background-color: #f06292;
+}
+
+/* Wishlist button specific styling */
+.wishlist-button {
+  width: auto;
+  padding: 8px 16px;
+  font-size: 1rem;
+  color: white;
+  background-color:#f4d03f;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.wishlist-button:hover {
+  background-color: #f39c12;
+}
+
+
