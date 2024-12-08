@@ -20,6 +20,19 @@ const recommendation = require('./recommendation');
 app.use(cors());
 app.use(express.json());
 
+// Helper function to query the database
+function queryDatabase(query, params) {
+  return new Promise((resolve, reject) => {
+    connection.query(query, params, (error, results) => {
+      if (error) {
+        return reject(error);
+      }
+      resolve(results);
+    });
+  });
+}
+
+
 // Route to search products using the stored procedure
 app.get('/api/products', (req, res) => {
   const { search, priceRange, brand, productType, rating, sortBy, sortOrder } = req.query;
@@ -64,26 +77,41 @@ app.get('/api/products', (req, res) => {
 
 // User routes
 app.use('/api/users', userRoutes);
+// Helper function to fetch a YouTube video link
+async function fetchYouTubeVideo(searchQuery) {
+  try {
+    const response = await youtube.search.list({
+      part: 'snippet',
+      q: searchQuery,
+      type: 'video',
+      maxResults: 1,
+    });
 
-// Fetch product details by ProductId and possibly fetch a YouTube video link
-app.get('/api/products/:productId', (req, res) => {
+    const items = response.data.items;
+    if (items.length > 0) {
+      const videoId = items[0].id.videoId;
+      return `https://www.youtube.com/watch?v=${videoId}`;
+    }
+    return null;
+  } catch (error) {
+    console.error('YouTube API error:', error);
+    return null;
+  }
+}
+
+// API endpoint to get product details
+app.get('/api/products/:productId', async (req, res) => {
   const { productId } = req.params;
 
-  const productQuery = `
-    SELECT Products.*, Brands.BrandName 
-    FROM Products 
-    JOIN Brands ON Products.BrandId = Brands.BrandId 
-    WHERE Products.ProductId = ?
-  `;
-  const videoQuery = 'SELECT VideoLink FROM Video WHERE ProductId = ?';
-  const insertVideoQuery = 'INSERT INTO Video (ProductId, VideoLink) VALUES (?, ?)';
-
-  // Fetch product details
-  connection.query(productQuery, [productId], (error, productResults) => {
-    if (error) {
-      console.error('Error fetching product details:', error);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
+  try {
+    // Fetch product details
+    const productQuery = `
+      SELECT Products.*, Brands.BrandName
+      FROM Products
+      JOIN Brands ON Products.BrandId = Brands.BrandId
+      WHERE Products.ProductId = ?
+    `;
+    const productResults = await queryDatabase(productQuery, [productId]);
 
     if (productResults.length === 0) {
       return res.status(404).json({ error: 'Product not found' });
@@ -91,55 +119,78 @@ app.get('/api/products/:productId', (req, res) => {
 
     const product = productResults[0];
 
-    // Check if a video link already exists for this product
-    connection.query(videoQuery, [productId], (videoError, videoResults) => {
-      if (videoError) {
-        console.error('Error fetching video links:', videoError);
-        return res.status(500).json({ error: 'Internal server error' });
-      }
+    // Fetch video links and comments concurrently
+    const videoQuery = 'SELECT VideoLink FROM Video WHERE ProductId = ?';
+    const commentQuery = `
+      SELECT c.CommentId, c.UserId, c.Date, c.Rating, c.CommentContent, u.UserName
+      FROM Comments c
+      LEFT JOIN Users u ON c.UserId = u.UserId
+      WHERE c.ProductId = ?
+    `;
 
-      if (videoResults.length > 0) {
-        // Video link exists
-        product.videoLinks = videoResults.map((row) => row.VideoLink);
-        return res.json(product);
+    const [videoResults, commentResults] = await Promise.all([
+      queryDatabase(videoQuery, [productId]),
+      queryDatabase(commentQuery, [productId]),
+    ]);
+
+    // Add video links to the product object
+    if (videoResults.length > 0) {
+      product.videoLinks = videoResults.map((row) => row.VideoLink);
+    } else {
+      // Fetch YouTube video if no video link exists
+      const searchQuery = `${product.BrandName} ${product.ProductName} review`;
+      const videoLink = await fetchYouTubeVideo(searchQuery);
+
+      if (videoLink) {
+        const insertVideoQuery = 'INSERT INTO Video (ProductId, VideoLink) VALUES (?, ?)';
+        await queryDatabase(insertVideoQuery, [productId, videoLink]);
+        product.videoLinks = [videoLink];
       } else {
-        // No video link exists, fetch from YouTube
-        const searchQuery = `${product.BrandName} ${product.ProductName} review`;
-        youtube.search.list({
-          part: 'snippet',
-          q: searchQuery,
-          type: 'video',
-          maxResults: 1,
-        }, (err, response) => {
-          if (err) {
-            console.error('YouTube API error:', err);
-            return res.status(500).json({ error: 'Internal server error' });
-          }
-
-          const items = response.data.items;
-          if (items && items.length > 0) {
-            const videoId = items[0].id.videoId;
-            const videoLink = `https://www.youtube.com/watch?v=${videoId}`;
-
-            // Save the video link to the database
-            connection.query(insertVideoQuery, [productId, videoLink], (insertError) => {
-              if (insertError) {
-                console.error('Error inserting video link:', insertError);
-                return res.status(500).json({ error: 'Internal server error' });
-              }
-
-              product.videoLinks = [videoLink];
-              return res.json(product);
-            });
-          } else {
-            // No video found, return product without videoLinks
-            product.videoLinks = [];
-            return res.json(product);
-          }
-        });
+        product.videoLinks = [];
       }
-    });
-  });
+    }
+
+    // Map comments
+    product.comments = commentResults.map((row) => ({
+      CommentId: row.CommentId,
+      UserName: row.UserName,
+      UserId: row.UserId,
+      Date: row.Date,
+      Rating: row.Rating,
+      CommentContent: row.CommentContent,
+    }));
+
+    // Send the final response
+    res.json(product);
+  } catch (error) {
+    console.error('Error fetching product details:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+app.post('/api/product/:productId/comments', async (req, res) => {
+  const { productId } = req.params;
+  const { UserId: storedUserId, Rating: rating, CommentContent: commentContent } = req.body;
+  console.log('Request Body:', req.body);  // Debugging line to check the request body
+  console.log('Product ID:', productId);  // Debugging line to check the productId
+
+  if (!storedUserId || !rating || !commentContent) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  console.log('begin to insert');
+  try {
+    const insertCommentQuery = `
+      INSERT INTO Comments (ProductId, UserId, Rating, CommentContent, Date)
+      VALUES (?, ?, ?, ?, NOW())`;
+    await queryDatabase(insertCommentQuery, [productId, storedUserId, rating, commentContent]);
+
+    res.status(201).json({ message: 'Comment added successfully' });
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // User routes

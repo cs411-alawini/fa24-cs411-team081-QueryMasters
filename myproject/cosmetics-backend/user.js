@@ -130,6 +130,122 @@ router.get('/wishlist/:userId', (req, res) => {
     });
 });
 
+// Delete an item from the user's wishlist
+router.delete('/wishlist/:recordId', (req, res) => {
+    const { recordId } = req.params;
+
+    // Validate RecordId
+    if (!recordId) {
+        return res.status(400).json({ message: 'RecordId is required.' });
+    }
+
+    const query = 'DELETE FROM WishListItem WHERE RecordId = ?';
+
+    connection.query(query, [recordId], (err, result) => {
+        if (err) {
+            console.error('Error deleting wishlist item:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Wishlist item not found.' });
+        }
+
+        res.status(200).json({ message: 'Wishlist item deleted successfully!' });
+    });
+
+});
+
+// Get comments for a user
+router.get('/comments/:userId', (req, res) => {
+    const { userId } = req.params;
+
+    const query = `
+        SELECT c.CommentId, c.ProductId, p.ProductName, c.Rating, c.CommentContent, c.Date
+        FROM Comments c
+        JOIN Products p ON c.ProductId = p.ProductId
+        WHERE c.UserId = ?
+    `;
+
+    connection.query(query, [userId], (err, results) => {
+        if (err) {
+            console.error('Error fetching comments:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
+
+        res.status(200).json(results);
+    });
+});
+
+// Delete a comment
+router.delete('/comments/:commentId', (req, res) => {
+    const { commentId } = req.params;
+
+    // Validate commentId
+    if (!commentId) {
+        return res.status(400).json({ message: 'CommentId is required.' });
+    }
+
+    const query = 'DELETE FROM Comments WHERE CommentId = ?';
+
+    connection.query(query, [commentId], (err, result) => {
+        if (err) {
+            console.error('Error deleting comment:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Comment not found.' });
+        }
+
+        res.status(200).json({ message: 'Comment deleted successfully!' });
+    });
+});
+
+// Update a comment and rating
+router.put('/comments/:commentId', (req, res) => {
+    const { commentId } = req.params;
+    const { CommentContent, Rating } = req.body;
+
+    // Validate input
+    if (!CommentContent || !Rating) {
+        return res.status(400).json({ message: 'Comment content and rating are required.' });
+    }
+
+    // Check if the comment exists
+    const query = `
+        SELECT * FROM Comments WHERE CommentId = ?
+    `;
+    connection.query(query, [commentId], (err, results) => {
+        if (err) {
+            console.error('Error fetching comment:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'Comment not found.' });
+        }
+
+        // Update the comment
+        const updateQuery = `
+            UPDATE Comments
+            SET CommentContent = ?, Rating = ?
+            WHERE CommentId = ?
+        `;
+        const params = [CommentContent, Rating, commentId];
+
+        connection.query(updateQuery, params, (updateErr, result) => {
+            if (updateErr) {
+                console.error('Error updating comment:', updateErr);
+                return res.status(500).json({ message: 'Database error' });
+            }
+
+            res.status(200).json({ message: 'Comment updated successfully!' });
+        });
+    });
+});
+
+
 module.exports = router;
 
 
